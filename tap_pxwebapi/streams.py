@@ -174,7 +174,16 @@ class TablesStream(pxwebapiStream):
 
             properties.append(
                 th.Property(
-                    item["code"],
+                    f'{item["code"]}_code',
+                    th.StringType,
+                    description=item["text"],
+                    required=False,
+                )
+            )
+
+            properties.append(
+                th.Property(
+                    f'{item["code"]}_label',
                     th.StringType,
                     description=item["text"],
                     required=False,
