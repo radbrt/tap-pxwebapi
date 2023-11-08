@@ -62,14 +62,18 @@ class TablesStream(pxwebapiStream):
                 return
 
             dim_key = dimension_keys[dim_index]
-            dim_values = dimensions[dim_key]["category"]["label"]
+            dim_category = dimensions[dim_key]["category"]
+            dim_codes = list(dim_category["index"].keys())  # Extract the codes
+            dim_labels = dim_category["label"]  # Extract the labels
 
-            for value_key in dim_values:
-                current_row[dim_key] = dim_values[value_key]
+            for code in dim_codes:
+                current_row[f"{dim_key}_code"] = code
+                current_row[f"{dim_key}_label"] = dim_labels[code]
                 recursive_build_row(dim_index + 1, current_row)
 
         recursive_build_row(0, {})
         return rows
+
 
     @staticmethod
     def create_hash_from_dict(d: dict) -> str:
