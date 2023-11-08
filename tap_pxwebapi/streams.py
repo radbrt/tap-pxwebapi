@@ -23,7 +23,7 @@ class TablesStream(pxwebapiStream):
     rest_method = "POST"
 
     primary_keys = ["_sdc_row_hash"]
-    replication_key = "Tid"
+    replication_key = "Tid_code"
 
     def __init__(self, *args, **kwargs):
         """Custom init to store config"""
