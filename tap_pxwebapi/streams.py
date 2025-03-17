@@ -23,7 +23,7 @@ class TablesStream(pxwebapiStream):
     rest_method = "POST"
 
     primary_keys = ["_sdc_row_hash"]
-    replication_key = "Tid"
+    replication_key = "Tid_code"
 
     def __init__(self, *args, **kwargs):
         """Custom init to store config"""
@@ -41,7 +41,7 @@ class TablesStream(pxwebapiStream):
     @property
     def path(self) -> str:
         """Return API endpoint path string."""
-        return f"en/table/{self.table_config['table_id']}"
+        return f"{self.config['language']}/table/{self.table_config['table_id']}"
     
     @property
     def name(self) -> str:
@@ -62,14 +62,18 @@ class TablesStream(pxwebapiStream):
                 return
 
             dim_key = dimension_keys[dim_index]
-            dim_values = dimensions[dim_key]["category"]["label"]
+            dim_category = dimensions[dim_key]["category"]
+            dim_codes = list(dim_category["index"].keys())  # Extract the codes
+            dim_labels = dim_category["label"]  # Extract the labels
 
-            for value_key in dim_values:
-                current_row[dim_key] = dim_values[value_key]
+            for code in dim_codes:
+                current_row[f"{dim_key}_code"] = code
+                current_row[f"{dim_key}_label"] = dim_labels[code]
                 recursive_build_row(dim_index + 1, current_row)
 
         recursive_build_row(0, {})
         return rows
+
 
     @staticmethod
     def create_hash_from_dict(d: dict) -> str:
@@ -105,15 +109,30 @@ class TablesStream(pxwebapiStream):
             }
         }
 
-        for select in self.table_config.get("select", []):
-            column_payload = {
-                "code": select["code"],
-                "selection": {
-                    "filter": "item",
-                    "values": select["values"]
+        if self.table_config.get("all"):
+            self.logger.info("Fetching all columns:")
+            self.logger.info(self.jsonstat_schema)
+            for variable in self.jsonstat_schema["variables"]:
+                base_payload["query"].append(
+                    {
+                        "code": variable["code"],
+                        "selection": {
+                            "filter": "all",
+                            "values": ["*"]
+                        }
+                    }
+                )
+        else:
+
+            for select in self.table_config.get("select", []):
+                column_payload = {
+                    "code": select["code"],
+                    "selection": {
+                        "filter": "item",
+                        "values": select["values"]
+                    }
                 }
-            }
-            base_payload["query"].append(column_payload)
+                base_payload["query"].append(column_payload)
 
         last_time = self.get_starting_replication_key_value(context)
         self.logger.info("last_time: " + str(last_time))
@@ -153,7 +172,13 @@ class TablesStream(pxwebapiStream):
 
             return base_payload
         
+    @cached_property
+    def jsonstat_schema(self) -> list:
+        
+        r = requests.get(self.url_base + self.path)
+        r.raise_for_status()
 
+        return r.json()
 
     @cached_property
     def schema(self) -> th.PropertiesList:
@@ -161,16 +186,25 @@ class TablesStream(pxwebapiStream):
         r = requests.get(self.url_base + self.path)
         r.raise_for_status()
 
-        time_variable = [item for item in r.json()["variables"] if item.get("time")]
+        time_variable = [item for item in self.jsonstat_schema["variables"] if item.get("time")]
         self.time_items = time_variable
 
         properties = th.PropertiesList()
         
-        for item in r.json()["variables"]:
+        for item in self.jsonstat_schema["variables"]:
 
             properties.append(
                 th.Property(
-                    item["code"],
+                    f'{item["code"]}_code',
+                    th.StringType,
+                    description=item["text"],
+                    required=False,
+                )
+            )
+
+            properties.append(
+                th.Property(
+                    f'{item["code"]}_label',
                     th.StringType,
                     description=item["text"],
                     required=False,

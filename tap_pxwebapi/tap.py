@@ -35,6 +35,11 @@ class Tappxwebapi(Tap):
                         th.StringType,
                     ),
                     th.Property(
+                        "all",
+                        th.BooleanType,
+                        default=True,
+                    ),
+                    th.Property(
                         "select",
                         th.ArrayType(
                             th.ObjectType(
@@ -45,7 +50,7 @@ class Tappxwebapi(Tap):
                                 th.Property(
                                     "values",
                                     th.ArrayType(th.StringType),
-                                )
+                                ),
                             )
                         )
                     )
@@ -53,7 +58,13 @@ class Tappxwebapi(Tap):
             ),
             required=True,
             description="Tables to read",
-        )
+        ),
+        th.Property(
+            "language",
+            th.StringType,
+            default="en",
+            description="Language",
+        ),
     ).to_dict()
 
     def discover_streams(self) -> list[streams.TablesStream]:
