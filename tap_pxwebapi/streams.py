@@ -41,7 +41,7 @@ class TablesStream(pxwebapiStream):
     @property
     def path(self) -> str:
         """Return API endpoint path string."""
-        return f"en/table/{self.table_config['table_id']}"
+        return f"{self.config['language']}/table/{self.table_config['table_id']}"
     
     @property
     def name(self) -> str:
@@ -109,15 +109,30 @@ class TablesStream(pxwebapiStream):
             }
         }
 
-        for select in self.table_config.get("select", []):
-            column_payload = {
-                "code": select["code"],
-                "selection": {
-                    "filter": "item",
-                    "values": select["values"]
+        if self.table_config.get("all"):
+            self.logger.info("Fetching all columns:")
+            self.logger.info(self.jsonstat_schema)
+            for variable in self.jsonstat_schema["variables"]:
+                base_payload["query"].append(
+                    {
+                        "code": variable["code"],
+                        "selection": {
+                            "filter": "all",
+                            "values": ["*"]
+                        }
+                    }
+                )
+        else:
+
+            for select in self.table_config.get("select", []):
+                column_payload = {
+                    "code": select["code"],
+                    "selection": {
+                        "filter": "item",
+                        "values": select["values"]
+                    }
                 }
-            }
-            base_payload["query"].append(column_payload)
+                base_payload["query"].append(column_payload)
 
         last_time = self.get_starting_replication_key_value(context)
         self.logger.info("last_time: " + str(last_time))
@@ -157,7 +172,13 @@ class TablesStream(pxwebapiStream):
 
             return base_payload
         
+    @cached_property
+    def jsonstat_schema(self) -> list:
+        
+        r = requests.get(self.url_base + self.path)
+        r.raise_for_status()
 
+        return r.json()
 
     @cached_property
     def schema(self) -> th.PropertiesList:
@@ -165,12 +186,12 @@ class TablesStream(pxwebapiStream):
         r = requests.get(self.url_base + self.path)
         r.raise_for_status()
 
-        time_variable = [item for item in r.json()["variables"] if item.get("time")]
+        time_variable = [item for item in self.jsonstat_schema["variables"] if item.get("time")]
         self.time_items = time_variable
 
         properties = th.PropertiesList()
         
-        for item in r.json()["variables"]:
+        for item in self.jsonstat_schema["variables"]:
 
             properties.append(
                 th.Property(

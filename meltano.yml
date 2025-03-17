@@ -19,16 +19,14 @@ plugins:
       tables:
       - table_name: example_table
         table_id: '11618'
-        select:
-        - code: 'Region'
-          values:
-          - '30'
     settings:
     # TODO: To configure using Meltano, declare settings and their types here:
     - name: base_url
       kind: string
     - name: tables
       kind: array
+    - name: language
+      kind: string
   loaders:
   - name: target-jsonl
     variant: andyh1203
