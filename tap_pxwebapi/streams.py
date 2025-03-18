@@ -110,8 +110,8 @@ class TablesStream(pxwebapiStream):
         }
 
         if self.table_config.get("all"):
-            self.logger.info("Fetching all columns:")
-            self.logger.info(self.jsonstat_schema)
+            self.logger.debug("Fetching all columns:")
+            self.logger.debug(self.jsonstat_schema)
             for variable in self.jsonstat_schema["variables"]:
                 if variable["code"] != "Tid":
                     base_payload["query"].append(
