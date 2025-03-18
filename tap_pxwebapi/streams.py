@@ -113,15 +113,16 @@ class TablesStream(pxwebapiStream):
             self.logger.info("Fetching all columns:")
             self.logger.info(self.jsonstat_schema)
             for variable in self.jsonstat_schema["variables"]:
-                base_payload["query"].append(
-                    {
-                        "code": variable["code"],
-                        "selection": {
-                            "filter": "all",
-                            "values": ["*"]
+                if variable["code"] != "Tid":
+                    base_payload["query"].append(
+                        {
+                            "code": variable["code"],
+                            "selection": {
+                                "filter": "all",
+                                "values": ["*"]
+                            }
                         }
-                    }
-                )
+                    )
         else:
 
             for select in self.table_config.get("select", []):
