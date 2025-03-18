@@ -87,7 +87,7 @@ class TablesStream(pxwebapiStream):
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse the response and return an iterator of result rows."""
         json_stat2 = response.json()
-        # self.logger.info(f"json_stat2: {json_stat2}")
+
         rows = self.json_stat2_to_rows(json_stat2)
 
         for i, row in enumerate(rows):
@@ -110,18 +110,19 @@ class TablesStream(pxwebapiStream):
         }
 
         if self.table_config.get("all"):
-            self.logger.info("Fetching all columns:")
-            self.logger.info(self.jsonstat_schema)
+            self.logger.debug("Fetching all columns:")
+            self.logger.debug(self.jsonstat_schema)
             for variable in self.jsonstat_schema["variables"]:
-                base_payload["query"].append(
-                    {
-                        "code": variable["code"],
-                        "selection": {
-                            "filter": "all",
-                            "values": ["*"]
+                if variable["code"] != "Tid":
+                    base_payload["query"].append(
+                        {
+                            "code": variable["code"],
+                            "selection": {
+                                "filter": "all",
+                                "values": ["*"]
+                            }
                         }
-                    }
-                )
+                    )
         else:
 
             for select in self.table_config.get("select", []):
@@ -135,20 +136,20 @@ class TablesStream(pxwebapiStream):
                 base_payload["query"].append(column_payload)
 
         last_time = self.get_starting_replication_key_value(context)
-        self.logger.info("last_time: " + str(last_time))
+        self.logger.debug("last_time: " + str(last_time))
 
         if not last_time:
             return base_payload
         
-        self.logger.info("time_items: " + str(self.time_items))
+        self.logger.debug("time_items: " + str(self.time_items))
         
         if len(self.time_items) == 1:
             new_times = [item for item in self.time_items[0]["values"] if item > last_time]
-            self.logger.info("new_times: " + str(new_times))
+            self.logger.debug("new_times: " + str(new_times))
 
             if not new_times:
                 # Difficult to abort the stream here, so we just fetch the latest period again
-                self.logger.info("No new times, fetching latest period")
+                self.logger.debug("No new times, fetching latest period")
                 time_payload = {
                     "code": self.time_items[0]["code"],
                     "selection": {
@@ -157,7 +158,7 @@ class TablesStream(pxwebapiStream):
                     }
                 }
             else:
-                self.logger.info(f"New times found, fetching new times {new_times}")
+                self.logger.debug(f"New times found, fetching new times {new_times}")
                 time_payload = {
                     "code": self.time_items[0]["code"],
                     "selection": {
@@ -168,7 +169,7 @@ class TablesStream(pxwebapiStream):
 
             base_payload["query"].append(time_payload)
 
-            self.logger.info("payload: " + str(base_payload))
+            self.logger.debug("payload: " + str(base_payload))
 
             return base_payload
         
